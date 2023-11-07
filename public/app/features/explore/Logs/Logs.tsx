@@ -102,7 +102,7 @@ interface Props extends Themeable2 {
   isFilterLabelActive?: (key: string, value: string, refId?: string) => Promise<boolean>;
   logsFrames?: DataFrame[];
   range: TimeRange;
-  loadMore?(range: AbsoluteTimeRange, refIds: string[]): void;
+  loadMore?(range: AbsoluteTimeRange): void;
 }
 
 export type LogsVisualisationType = 'table' | 'logs';
@@ -808,9 +808,7 @@ class UnthemedLogs extends PureComponent<Props, State> {
               scrollToTopLogs={this.scrollToTopLogs}
               addResultsToCache={addResultsToCache}
               clearCache={clearCache}
-              loadMore={(range: AbsoluteTimeRange) => {
-                loadMore?.(range, logsQueries?.map((q) => q.refId) ?? []);
-              }}
+              loadMore={loadMore}
             />
           </div>
         </PanelChrome>
