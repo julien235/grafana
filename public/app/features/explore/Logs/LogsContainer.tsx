@@ -34,7 +34,7 @@ import {
   selectIsWaitingForData,
   setSupplementaryQueryEnabled,
 } from '../state/query';
-import { updateTimeRange, loadMore } from '../state/time';
+import { updateTimeRange, loadMoreLogs } from '../state/time';
 import { LiveTailControls } from '../useLiveTailControls';
 import { getFieldLinksForExplore } from '../utils/links';
 
@@ -146,9 +146,9 @@ class LogsContainer extends PureComponent<LogsContainerProps, LogsContainerState
     updateTimeRange({ exploreId, absoluteRange });
   };
 
-  loadMore = (absoluteRange: AbsoluteTimeRange) => {
-    const { exploreId, loadMore } = this.props;
-    loadMore({ exploreId, absoluteRange });
+  loadMoreLogs = (absoluteRange: AbsoluteTimeRange) => {
+    const { exploreId, loadMoreLogs } = this.props;
+    loadMoreLogs({ exploreId, absoluteRange });
   };
 
   private getQuery(
@@ -296,7 +296,7 @@ class LogsContainer extends PureComponent<LogsContainerProps, LogsContainerState
             loadingState={loadingState}
             loadLogsVolumeData={() => loadSupplementaryQueryData(exploreId, SupplementaryQueryType.LogsVolume)}
             onChangeTime={this.onChangeTime}
-            loadMore={this.loadMore}
+            loadMoreLogs={this.loadMoreLogs}
             onClickFilterLabel={logDetailsFilterAvailable ? onClickFilterLabel : undefined}
             onClickFilterOutLabel={logDetailsFilterAvailable ? onClickFilterOutLabel : undefined}
             onStartScanning={onStartScanning}
@@ -368,7 +368,7 @@ function mapStateToProps(state: StoreState, { exploreId }: { exploreId: string }
 
 const mapDispatchToProps = {
   updateTimeRange,
-  loadMore,
+  loadMoreLogs,
   addResultsToCache,
   clearCache,
   loadSupplementaryQueryData,
