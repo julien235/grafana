@@ -48,6 +48,6 @@ func (r *Registry) SaveExternalService(ctx context.Context, cmd *extsvcauth.Exte
 		r.logger.Debug("Routing the External Service registration to the OAuth2Server", "service", cmd.Name)
 		return r.oauthServer.SaveExternalService(ctx, cmd)
 	default:
-		return nil, extsvcauth.ErrUnknownProvider.Errorf("unknow provider '%v'", cmd.AuthProvider)
+		return nil, extsvcauth.ErrUnknownProvider.Errorf("unknown provider '%v'", cmd.AuthProvider)
 	}
 }
