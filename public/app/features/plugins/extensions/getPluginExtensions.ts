@@ -18,6 +18,7 @@ import {
   generateExtensionId,
   getEventHelpers,
   isPluginExtensionComponentConfig,
+  wrapExtensionComponentWithContext,
 } from './utils';
 import {
   assertIsReactComponent,
@@ -101,7 +102,7 @@ export const getPluginExtensions: GetExtensions = ({ context, extensionPointId, 
 
           title: extensionConfig.title,
           description: extensionConfig.description,
-          component: extensionConfig.component,
+          component: wrapExtensionComponentWithContext({ pluginId, component: extensionConfig.component }),
         };
 
         extensions.push(extension);

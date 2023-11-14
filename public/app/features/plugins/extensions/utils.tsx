@@ -1,6 +1,7 @@
 import { css } from '@emotion/css';
 import { isArray, isObject } from 'lodash';
 import React from 'react';
+import { useAsync } from 'react-use';
 
 import {
   type PluginExtensionLinkConfig,
@@ -65,6 +66,44 @@ export function getEventHelpers(pluginId: string, context?: Readonly<object>): P
 
 type ModalWrapperProps = {
   onDismiss: () => void;
+};
+
+export const wrapExtensionComponentWithContext = ({
+  pluginId,
+  component: Component,
+}: {
+  pluginId: string;
+  component: PluginExtensionComponentConfig['component'];
+}) => {
+  const WrappedExtensionComponent: PluginExtensionComponentConfig['component'] = ({ context }) => {
+    const {
+      error,
+      loading,
+      value: pluginMeta,
+    } = useAsync(() => getPluginSettings(pluginId, { showErrorAlert: false }, true));
+
+    if (loading) {
+      return null;
+    }
+
+    if (error) {
+      logWarning(`Could not fetch plugin meta information for "${pluginId}". (${error.message})`);
+      return null;
+    }
+
+    if (!pluginMeta) {
+      logWarning(`Fetched plugin meta information is empty for "${pluginId}".`);
+      return null;
+    }
+
+    return (
+      <PluginContextProvider meta={pluginMeta}>
+        <Component context={context} />
+      </PluginContextProvider>
+    );
+  };
+
+  return WrappedExtensionComponent;
 };
 
 // Wraps a component with a modal.
