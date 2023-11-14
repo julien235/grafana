@@ -1,5 +1,5 @@
 import type * as monacoType from 'monaco-editor/esm/vs/editor/editor.api';
-import React, { ReactNode, useCallback } from 'react';
+import React, { ReactNode, useCallback, useRef } from 'react';
 
 import { QueryEditorProps } from '@grafana/data';
 import { CodeEditor, Monaco, Themeable2, withTheme2 } from '@grafana/ui';
@@ -22,9 +22,28 @@ export const CloudWatchLogsQueryFieldMonaco = (props: CloudWatchLogsQueryFieldPr
   const { query, datasource, onChange, ExtraFieldElement, data } = props;
 
   const showError = data?.error?.refId === query.refId;
+  const monacoRef = useRef<Monaco>();
+  const disposalRef = useRef<monacoType.IDisposable>();
+
+  const onChangeLogs = useCallback(
+    async (query: CloudWatchLogsQuery) => {
+      onChange(query);
+      disposalRef.current = await registerLanguage(
+        monacoRef.current!,
+        language,
+        datasource.logsCompletionItemProviderFunc({
+          region: query.region,
+          logGroups: query.logGroups,
+          logGroupNames: query.logGroupNames,
+        }),
+        disposalRef.current
+      );
+    },
+    [datasource, onChange]
+  );
 
   const onChangeQuery = useCallback(
-    (value: string) => {
+    async (value: string) => {
       const nextQuery = {
         ...query,
         expression: value,
@@ -44,6 +63,19 @@ export const CloudWatchLogsQueryFieldMonaco = (props: CloudWatchLogsQueryFieldPr
     },
     [onChangeQuery]
   );
+  const onBeforeEditorMount = async (monaco: Monaco) => {
+    monacoRef.current = monaco;
+    disposalRef.current = await registerLanguage(
+      monaco,
+      language,
+      datasource.logsCompletionItemProviderFunc({
+        region: query.region,
+        logGroups: query.logGroups,
+        logGroupNames: query.logGroupNames,
+      })
+    );
+  };
+  console.log('logsqueryfield', query);
 
   return (
     <>
@@ -53,11 +85,11 @@ export const CloudWatchLogsQueryFieldMonaco = (props: CloudWatchLogsQueryFieldPr
         legacyLogGroupNames={query.logGroupNames}
         logGroups={query.logGroups}
         onChange={(logGroups) => {
-          onChange({ ...query, logGroups, logGroupNames: undefined });
+          onChangeLogs({ ...query, logGroups, logGroupNames: undefined });
         }}
         //legacy props
         legacyOnChange={(logGroupNames) => {
-          onChange({ ...query, logGroupNames });
+          onChangeLogs({ ...query, logGroupNames });
         }}
       />
       <div className="gf-form-inline gf-form-inline--nowrap flex-grow-1">
@@ -91,10 +123,13 @@ export const CloudWatchLogsQueryFieldMonaco = (props: CloudWatchLogsQueryFieldPr
                 onChangeQuery(value);
               }
             }}
-            onBeforeEditorMount={(monaco: Monaco) =>
-              registerLanguage(monaco, language, datasource.logsCompletionItemProvider)
-            }
+            onBeforeEditorMount={onBeforeEditorMount}
             onEditorDidMount={onEditorMount}
+            onEditorWillUnmount={() => {
+              console.log('unmount');
+              disposalRef.current?.dispose();
+            }}
+            //key={JSON.stringify(query)}
           />
         </div>
         {ExtraFieldElement}

@@ -39,6 +39,8 @@ export interface CodeEditorProps {
    */
   onEditorDidMount?: (editor: MonacoEditor, monaco: Monaco) => void;
 
+  onEditorWillUnmount?: () => void;
+
   /** Handler to be performed when editor is blurred */
   onBlur?: CodeEditorChangeHandler;
 
