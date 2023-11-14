@@ -296,7 +296,6 @@ func (s *store) getResourcePermissions(sess *db.Session, orgID int64, query GetR
 		return nil, nil
 	}
 
-	// TODO(aarongodin): john madden
 	rawSelect := `
 	SELECT
 		p.*,
