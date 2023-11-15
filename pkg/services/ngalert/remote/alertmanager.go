@@ -27,8 +27,8 @@ import (
 )
 
 const (
-	readyEndpoint  = "/-/ready"
-	configEndpoint = "/api/v1/alerts"
+	readyEndpoint         = "/-/ready"
+	defaultConfigEndpoint = "/api/v1/alerts"
 
 	senderStartTimeout = 10 * time.Second
 )
@@ -38,10 +38,11 @@ type configStore interface {
 }
 
 type Alertmanager struct {
-	log      log.Logger
-	orgID    int64
-	tenantID string
-	url      string
+	log            log.Logger
+	orgID          int64
+	tenantID       string
+	url            string
+	configEndpoint string
 
 	amClient    *amclient.AlertmanagerAPI
 	configStore configStore
@@ -54,6 +55,7 @@ type AlertmanagerConfig struct {
 	URL               string
 	TenantID          string
 	BasicAuthPassword string
+	ConfigEndpoint    string
 }
 
 func NewAlertmanager(cfg AlertmanagerConfig, orgID int64, store configStore) (*Alertmanager, error) {
@@ -63,6 +65,10 @@ func NewAlertmanager(cfg AlertmanagerConfig, orgID int64, store configStore) (*A
 			basicAuthPassword: cfg.BasicAuthPassword,
 			next:              http.DefaultTransport,
 		},
+	}
+
+	if cfg.ConfigEndpoint == "" {
+		cfg.ConfigEndpoint = defaultConfigEndpoint
 	}
 
 	if cfg.URL == "" {
@@ -92,14 +98,15 @@ func NewAlertmanager(cfg AlertmanagerConfig, orgID int64, store configStore) (*A
 	}
 
 	return &Alertmanager{
-		amClient:    amclient.New(transport, nil),
-		configStore: store,
-		httpClient:  &client,
-		log:         log.New("ngalert.remote.alertmanager"),
-		sender:      s,
-		orgID:       orgID,
-		tenantID:    cfg.TenantID,
-		url:         cfg.URL,
+		amClient:       amclient.New(transport, nil),
+		configStore:    store,
+		httpClient:     &client,
+		log:            log.New("ngalert.remote.alertmanager"),
+		sender:         s,
+		orgID:          orgID,
+		tenantID:       cfg.TenantID,
+		url:            cfg.URL,
+		configEndpoint: cfg.ConfigEndpoint,
 	}, nil
 }
 
@@ -166,7 +173,7 @@ func (am *Alertmanager) SaveAndApplyConfig(ctx context.Context, cfg *apimodels.P
 func (am *Alertmanager) saveConfig(ctx context.Context, cfg *apimodels.PostableUserConfig) error {
 	b, err := json.Marshal(&cfg)
 	if err != nil {
-		return fmt.Errorf("failed to serialize to the Alertmanager configuration: %w", err)
+		return fmt.Errorf("failed to serialize the Alertmanager configuration: %w", err)
 	}
 
 	cmd := ngmodels.SaveAlertmanagerConfigurationCmd{
@@ -365,7 +372,7 @@ func (am *Alertmanager) postConfig(ctx context.Context, cfg *apimodels.PostableU
 		return err
 	}
 
-	url := strings.TrimSuffix(am.url, "/alertmanager") + configEndpoint
+	url := strings.TrimSuffix(am.url, "/alertmanager") + am.configEndpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(b))
 	if err != nil {
 		return fmt.Errorf("error creating request: %v", err)
@@ -377,8 +384,8 @@ func (am *Alertmanager) postConfig(ctx context.Context, cfg *apimodels.PostableU
 		return err
 	}
 
-	if res.StatusCode == http.StatusNotFound {
-		return fmt.Errorf("config not found")
+	if res.StatusCode != http.StatusCreated {
+		return fmt.Errorf("unexpected status code: %d", res.StatusCode)
 	}
 
 	defer func() {
@@ -399,7 +406,7 @@ func (am *Alertmanager) postConfig(ctx context.Context, cfg *apimodels.PostableU
 }
 
 func (am *Alertmanager) getConfig(ctx context.Context) (*apimodels.PostableUserConfig, error) {
-	url := strings.TrimSuffix(am.url, "/alertmanager") + configEndpoint
+	url := strings.TrimSuffix(am.url, "/alertmanager") + am.configEndpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %v", err)
@@ -411,8 +418,11 @@ func (am *Alertmanager) getConfig(ctx context.Context) (*apimodels.PostableUserC
 		return nil, err
 	}
 
-	if res.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("config not found")
+	if res.StatusCode != http.StatusOK {
+		if res.StatusCode == http.StatusNotFound {
+			return nil, fmt.Errorf("config not found")
+		}
+		return nil, fmt.Errorf("unexpected status code: %d", res.StatusCode)
 	}
 
 	defer func() {
