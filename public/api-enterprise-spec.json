@@ -3528,6 +3528,7 @@
           "format": "int64"
         },
         "folderId": {
+          "description": "Deprecated: use FolderUID instead",
           "type": "integer",
           "format": "int64"
         },
@@ -4340,6 +4341,7 @@
           "type": "boolean"
         },
         "id": {
+          "description": "Deprecated: use Uid instead",
           "type": "integer",
           "format": "int64"
         },
@@ -4886,6 +4888,18 @@
         "Version": {
           "type": "integer",
           "format": "int64"
+        }
+      }
+    },
+    "LibraryElementArrayResponse": {
+      "type": "object",
+      "title": "LibraryElementArrayResponse is a response struct for an array of LibraryElementDTO.",
+      "properties": {
+        "result": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LibraryElementDTO"
+          }
         }
       }
     },
@@ -8433,6 +8447,12 @@
       "description": "",
       "schema": {
         "$ref": "#/definitions/GetHomeDashboardResponse"
+      }
+    },
+    "getLibraryElementArrayResponse": {
+      "description": "",
+      "schema": {
+        "$ref": "#/definitions/LibraryElementArrayResponse"
       }
     },
     "getLibraryElementConnectionsResponse": {
